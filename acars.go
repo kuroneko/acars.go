@@ -5,18 +5,29 @@
 package acars
 
 import (
+	"errors"
+	"io/ioutil"
 	"net/http"
 	"net/url"
-	"io/ioutil"
+)
+
+var (
+	ErrMalformedAcarsMessage    = errors.New("Malformed ACARS message recieved")
+	ErrInvalidMessageId         = errors.New("Message ID Invalid")
+	ErrUnknownMessageFormat     = errors.New("Unknown Message Format")
+	ErrUnsupportedMessageFormat = errors.New("Unsupported Message Format")
 )
 
 // Server represents all of the necessary state to talk to Hoppie's ACARS
 type Server struct {
-	BaseUrl		string
-	Logon		string
-	StationName	string
+	BaseUrl     string
+	Logon       string
+	StationName string
 }
 
+// New creates a new Server with which you can communicate with an ACARS server.
+//
+// It will validate the URL provided in baseUrl.  It currently does not validate the logon.
 func New(baseUrl, logon, stationName string) (srv *Server, err error) {
 	srv = new(Server)
 
@@ -31,33 +42,44 @@ func New(baseUrl, logon, stationName string) (srv *Server, err error) {
 	return srv, err
 }
 
-func (srv *Server) Do(req *Request) (resp string, err error) {
+// Do performs an ACARS operation.
+//
+// req contains the fully populated ACARS request (logon, from, to, type, packet)
+// resp contains the data sent back by the server encapsulated as a tclmanip.TclList.
+// err contains the error if one was encountered during the request.
+func (srv *Server) Do(req *Request) (resp tclmanip.TclList, err error) {
 	hresp, err := http.PostForm(srv.BaseUrl, req.ToValues())
-	if (err != nil) {
+	if err != nil {
 		return "", err
 	}
 	defer hresp.Body.Close()
 
 	data, err := ioutil.ReadAll(hresp.Body)
-	if (err != nil) {
+	if err != nil {
 		return "", err
 	}
-	return string(data), nil
+	return tclmanip.TclList(data), nil
 }
 
-func (srv *Server) Ping(recipient string) (extraResp []string, err error) {
+// Ping performs an ACARS ping to the recipient specified.
+//
+// extraResp contains the response after the "ok", if recieved.
+func (srv *Server) Ping(recipient string) (extraResp tclmanip.TclList, err error) {
 	req := Request{Logon: srv.Logon, From: srv.StationName, To: recipient, Type: MsgTypePing}
 	pingResp, err := srv.Do(&req)
 	if err != nil {
 		return nil, err
 	}
-	parts := CurlySplit(pingResp)
-	if (parts[0] != "ok") {
-		return nil, &AcarsError{errorMessage: parts[1]}
+	pingRespParts := pingResp.Split()
+	if pingRespParts[0] != "ok" {
+		return nil, &AcarsError{errorMessage: pingRespParts[1]}
 	}
-	return parts[1:], nil
+	return tclmanip.Join(pingRespParts[1:]), nil
 }
 
+// Peek performs an ACARS Peek (fetch without update)
+//
+// messages contains the list of responses provided by the server
 func (srv *Server) Peek() (messages []*Message, err error) {
 	messages = []*Message{}
 	req := Request{Logon: srv.Logon, From: srv.StationName, To: srv.StationName, Type: MsgTypePeek}
@@ -66,7 +88,7 @@ func (srv *Server) Peek() (messages []*Message, err error) {
 		return nil, err
 	}
 	parts := CurlySplit(peekMsg)
-	if (parts[0] != "ok") {
+	if parts[0] != "ok" {
 		return nil, &AcarsError{errorMessage: parts[1]}
 	}
 	for _, subMsg := range parts[1:] {
@@ -78,6 +100,9 @@ func (srv *Server) Peek() (messages []*Message, err error) {
 	return messages, nil
 }
 
+// Poll performs an ACARS Poll (fetch with update)
+//
+// messages contains the list of responses provided by the server
 func (srv *Server) Poll() (messages []*Message, err error) {
 	req := Request{Logon: srv.Logon, From: srv.StationName, To: srv.StationName, Type: MsgTypePoll}
 	pollMsg, err := srv.Do(&req)
@@ -85,7 +110,7 @@ func (srv *Server) Poll() (messages []*Message, err error) {
 		return nil, err
 	}
 	parts := CurlySplit(pollMsg)
-	if (parts[0] != "ok") {
+	if parts[0] != "ok" {
 		return nil, &AcarsError{errorMessage: parts[1]}
 	}
 	for _, subMsg := range parts[1:] {

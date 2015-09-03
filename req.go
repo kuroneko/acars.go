@@ -1,29 +1,22 @@
 package acars
 
 import (
+	"github.com/ajg/form"
 	"net/url"
 )
 
 type Request struct {
-	Logon 	string
-	From 	string
-	To 	string
-	Type 	int
-	Packet  string
+	Logon  string `form:"logon"`
+	From   string `form:"from"`
+	To     string `form:"to"`
+	Type   int    `form:"type"`
+	Packet string `form:"packet"`
 }
 
-
-func (req *Request) ToValues() url.Values {
-	valOut := url.Values{}
-
-	valOut.Add("logon", req.Logon)
-	valOut.Add("from", req.From)
-	valOut.Add("type", reqTypeToString(req.Type))
-	if (req.To != "") {
-		valOut.Add("to", req.To)
+func (req *Request) ToValues() (val url.Values) {
+	val, err := form.EncodeToValues(req)
+	if err != nil {
+		panic(err)
 	}
-	if (req.Packet != "") {
-		valOut.Add("packet", req.Packet)
-	}
-	return valOut
+	return val
 }
