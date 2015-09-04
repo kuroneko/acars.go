@@ -7,9 +7,9 @@ import (
 
 type CpdlcMessage struct {
 	ID          int
-	ReferenceID int
+	ReferenceID *int
 	RAType      string
-	Body        cpdlcstring
+	Body        CpdlcString
 }
 
 const (
@@ -23,29 +23,57 @@ const (
 
 // DecodeCpdlcMessage translates a multipart CPDLC into a cpdlc message
 func DecodeCpdlcMessage(msgIn string) (cpdlc *CpdlcMessage, err error) {
-	if msgIn[0] != '/' {
-		return nil, ErrMalformedAcarsMessage
-	}
-	messageParts := strings.Split(msgIn[1:], '/')
-
-	if msgIn[0] != "data2" {
-		return nil, ErrMalformedAcarsMessage
-	}
-	if len(msgIn) < 5 {
-		return nil, ErrMalformedAcarsMessage
-	}
-
 	cpdlc = &CpdlcMessage{}
-	cpdlc.ID, err = strconv.Atoi(msgIn[1])
+	err = cpdlc.Decode(msgIn)
 	if err != nil {
-		return nil, ErrInvalidMessageId
+		// don't return incomplete/corrupt messages
+		cpdlc = nil
 	}
-	cpdlc.ReferenceID, err = strconv.Atoi(msgIn[2])
-	if err != nil {
-		return nil, ErrInvalidMessageId
-	}
-	cpdlc.RAType = msgIn[3]
-	cpdlc.Body = cpdlcstring(msgIn[4])
+	return cpdlc, err
+}
 
-	return cpdlc
+func (cpdlc *CpdlcMessage) Decode(msgIn string) (err error) {
+	if msgIn[0] != '/' {
+		return ErrMalformedAcarsMessage
+	}
+	messageParts := strings.Split(msgIn[1:], "/")
+
+	if messageParts[0] != "data2" {
+		return ErrMalformedAcarsMessage
+	}
+	if len(messageParts) < 5 {
+		return ErrMalformedAcarsMessage
+	}
+
+	cpdlc.ID, err = strconv.Atoi(messageParts[1])
+	if err != nil {
+		return ErrInvalidMessageId
+	}
+	if len(messageParts[2]) > 0 {
+		msgRef, err := strconv.Atoi(messageParts[2])
+		if err != nil {
+			return ErrInvalidMessageId
+		}
+		cpdlc.ReferenceID = &msgRef
+	} else {
+		cpdlc.ReferenceID = nil
+	}
+	cpdlc.RAType = messageParts[3]
+	cpdlc.Body = CpdlcString(messageParts[4])
+
+	return nil
+}
+
+func (cpdlc *CpdlcMessage) WireString() string {
+	rvlist := make([]string, 5)
+
+	rvlist[0] = "data2"
+	rvlist[1] = strconv.Itoa(cpdlc.ID)
+	if cpdlc.ReferenceID != nil {
+		rvlist[2] = strconv.Itoa(*cpdlc.ReferenceID)
+	}
+	rvlist[3] = cpdlc.RAType
+	rvlist[4] = string(cpdlc.Body)
+
+	return "/" + strings.Join(rvlist, "/")
 }

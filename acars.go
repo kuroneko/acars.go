@@ -6,6 +6,7 @@ package acars
 
 import (
 	"errors"
+	"github.com/kuroneko/tclmanip.go"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -68,11 +69,11 @@ func (srv *Server) Ping(recipient string) (extraResp tclmanip.TclList, err error
 	req := Request{Logon: srv.Logon, From: srv.StationName, To: recipient, Type: MsgTypePing}
 	pingResp, err := srv.Do(&req)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	pingRespParts := pingResp.Split()
 	if pingRespParts[0] != "ok" {
-		return nil, &AcarsError{errorMessage: pingRespParts[1]}
+		return "", &AcarsError{errorMessage: pingRespParts[1].String()}
 	}
 	return tclmanip.Join(pingRespParts[1:]), nil
 }
@@ -87,9 +88,9 @@ func (srv *Server) Peek() (messages []*Message, err error) {
 	if err != nil {
 		return nil, err
 	}
-	parts := CurlySplit(peekMsg)
+	parts := peekMsg.Split()
 	if parts[0] != "ok" {
-		return nil, &AcarsError{errorMessage: parts[1]}
+		return nil, &AcarsError{errorMessage: parts[1].String()}
 	}
 	for _, subMsg := range parts[1:] {
 		msg := ParseMessage(subMsg)
@@ -109,9 +110,9 @@ func (srv *Server) Poll() (messages []*Message, err error) {
 	if err != nil {
 		return nil, err
 	}
-	parts := CurlySplit(pollMsg)
+	parts := pollMsg.Split()
 	if parts[0] != "ok" {
-		return nil, &AcarsError{errorMessage: parts[1]}
+		return nil, &AcarsError{errorMessage: parts[1].String()}
 	}
 	for _, subMsg := range parts[1:] {
 		msg := ParseMessage(subMsg)

@@ -1,10 +1,10 @@
 package acars
 
-// A cpdlcstring is an Hoppie's ACARS encoded CPDLC message with it's native encoding
-type cpdlcstring string
+// A CpdlcString is an Hoppie's ACARS encoded CPDLC message with it's native encoding
+type CpdlcString string
 
 // String returns the platform neutral encoding
-func (str cpdlcstring) String() string {
+func (str CpdlcString) String() string {
 	rOut := []rune{}
 
 	for _, r := range str {
@@ -23,7 +23,7 @@ func (str cpdlcstring) String() string {
 }
 
 // NewCpdlcString encodes a platform neutral string into Hoppie's CPDLC format
-func NewCpdlcString(strIn string) cpdlcstring {
+func NewCpdlcString(strIn string) CpdlcString {
 	rOut := []rune{}
 
 	var consumeNewline = false
@@ -37,7 +37,7 @@ func NewCpdlcString(strIn string) cpdlcstring {
 			rOut = append(rOut, '|')
 			consumeNewline = false
 		case '\r', '\n':
-			if !consumeNewLine {
+			if !consumeNewline {
 				rOut = append(rOut, '@')
 				consumeNewline = false
 			}
@@ -47,5 +47,5 @@ func NewCpdlcString(strIn string) cpdlcstring {
 			consumeNewline = false
 		}
 	}
-	return cpdlcstring(rOut)
+	return CpdlcString(rOut)
 }

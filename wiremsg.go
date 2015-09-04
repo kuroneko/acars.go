@@ -1,7 +1,7 @@
 package acars
 
 import (
-	"errors"
+	//"errors"
 )
 
 // WireMsg is the interface to which all ACARS service encoded

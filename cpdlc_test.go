@@ -5,10 +5,10 @@ import (
 )
 
 func TestCpdlcInterfaceConformance(t *testing.T) {
-	testObj := new(CpdlcPayload)
+	var testObj interface{} = new(CpdlcMessage)
 
-	_, ok := testObj.(Payload)
-	if (!ok) {
-		t.Fatalf("CpdlcPayload does not conform to Payload interface")
+	_, ok := testObj.(WireMsg)
+	if !ok {
+		t.Fatalf("CpdlcPayload does not conform to WireMsg interface")
 	}
 }
