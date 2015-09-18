@@ -7,9 +7,9 @@ import (
 
 // Message represents a single subpayload from an ACARS server (as part of a peek or poll)
 type Message struct {
-	From    string // sending station ID
-	Type    int    // message type
-	Message string // payload
+	From    string  // sending station ID
+	Type    MsgType // message type
+	Message string  // payload
 }
 
 // ParseMessage takes a raw message (as recieved from the server) and parses it into our
@@ -23,14 +23,14 @@ func ParseMessage(raw tclmanip.TclList) *Message {
 		From:    bits[0].String(),
 		Message: bits[2].String(),
 	}
-	msg.Type = reqTypeFromString(bits[1].String())
+	msg.Type = MsgType(bits[1].String())
 
 	return &msg
 }
 
 // String provides a human interpretable version of the CPDLC message
 func (msg *Message) String() string {
-	return fmt.Sprintf("%s: (%s) %s", msg.From, reqTypeToString(msg.Type), msg.Message)
+	return fmt.Sprintf("%s: (%s) %s", msg.From, msg.Type, msg.Message)
 }
 
 // Decode translates the Message (payload) into a useful form if able.

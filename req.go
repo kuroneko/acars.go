@@ -6,11 +6,11 @@ import (
 )
 
 type Request struct {
-	Logon  string `form:"logon"`
-	From   string `form:"from"`
-	To     string `form:"to"`
-	Type   int    `form:"type"`
-	Packet string `form:"packet"`
+	Logon  string  `form:"logon"`
+	From   string  `form:"from"`
+	To     string  `form:"to"`
+	Type   MsgType `form:"type"`
+	Packet string  `form:"packet"`
 }
 
 func (req *Request) ToValues() (val url.Values) {
